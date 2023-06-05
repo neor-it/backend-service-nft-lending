@@ -1,6 +1,9 @@
 # Backend service
 ### Backend service for NFT Lending Protocol
 <p/> 1. main.go - main file for run service on localhost or docker
+<p/> 1.1 NFTHistory.go - file for get history of NFTs
+<p/> 1.2 getAllNFTs.go - file for get all NFTs from smart contract
+<p/> 1.3 eventTracker.go - file for get events from smart contract
 <p/> 2. index.html - main page for service with form for getting stats and list of NFTs
 
 # Start with docker
