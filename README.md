@@ -10,7 +10,7 @@ docker pull ghcr.io/neor-it/backend-service-nft-lending:latest
 ```
 2. Run docker image
 ```
-docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name nftlending --rm ghcr.io/neor-it/backend-service-nft-lending
+docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name backendServ --rm ghcr.io/neor-it/backend-service-nft-lending
 ```
 3. Open in browser <a href="http://localhost:8080">http://localhost:8080</a>
 
