@@ -6,7 +6,7 @@
 # Start with docker
 1. Pull image from docker hub
 ```
-docker docker pull ghcr.io/neor-it/backend-service-nft-lending:latest
+docker pull ghcr.io/neor-it/backend-service-nft-lending:latest
 ```
 2. Run docker image
 ```
