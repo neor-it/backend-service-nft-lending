@@ -51,7 +51,7 @@ type Event struct {
 }
 
 func getEthClientAndAddress() (*ethclient.Client, common.Address, error) {
-	_ = godotenv.Load()
+	godotenv.Load()
 
 	API_KEY := os.Getenv("API_KEY")
 	log.Println("API_KEY:", API_KEY)
