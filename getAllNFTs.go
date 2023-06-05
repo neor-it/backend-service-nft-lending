@@ -41,7 +41,7 @@ func getNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddress comm
 	for i := range data {
 		jsonData, err := json.Marshal(data[i])
 		if err != nil {
-			log.Println("Ошибка при преобразовании в JSON:", err)
+			log.Println("Error marshaling data:", err)
 			return nil, err
 		}
 
@@ -52,7 +52,7 @@ func getNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddress comm
 		err = json.Unmarshal(jsonData, &nftInfo)
 
 		if err != nil {
-			log.Println("Ошибка при разборе JSON:", err)
+			log.Println("Error unmarshaling data:", err)
 			return nil, err
 		}
 
