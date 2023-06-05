@@ -51,10 +51,7 @@ type Event struct {
 }
 
 func getEthClientAndAddress() (*ethclient.Client, common.Address, error) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	_ = godotenv.Load()
 
 	API_KEY := os.Getenv("API_KEY")
 	log.Println("API_KEY:", API_KEY)
