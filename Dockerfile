@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 8080
 
-ENTRYPOINT [ "go", "run",  "main.go"]
+ENTRYPOINT [ "go", "run",  "main.go", "NFTHistory.go", "eventTracker.go", "getAllNFTs.go"]
