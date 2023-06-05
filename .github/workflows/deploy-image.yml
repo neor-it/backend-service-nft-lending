@@ -3,7 +3,7 @@ name: Backend-Service for smart contract NFT-Lending
 on:
     push:
         branches: 
-            -main
+            - main
 
 jobs:
     build:
