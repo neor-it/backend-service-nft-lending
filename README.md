@@ -1,14 +1,7 @@
-# backend-service-nft-lending
-Backend service for smart contract
-
-
-# Smart Contract
-Smart Contract is located in the contracts folder and is written in Solidity. It is compiled using Remix IDE and deploy to the Sepolia Testnet.
-
-Lending Protocol Contract: https://sepolia.etherscan.io/address/0x22b63f333dB05DC4ead6c781349893378ed77F70
-
-FakeUSDT Contract: https://sepolia.etherscan.io/address/0x45942dd3a289bf7c088b8ebe2c61465437616cad
-
+# Backend service
+### Backend service for NFT Lending Protocol
+<p/> 1. main.go - main file for run service on localhost or docker
+<p/> 2. index.html - main page for service with form for getting stats and list of NFTs
 
 # Start with docker
 1. Pull image from docker hub
@@ -23,6 +16,13 @@ docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name nftlending --rm ghcr.io/n
 
 ## API
 1. <a href="https://www.infura.io/">infura.io/</a> - API_KEY for get access to Sepolia Testnet
+
+# Smart Contract
+Smart Contract is located in the contracts folder and is written in Solidity. It is compiled using Remix IDE and deploy to the Sepolia Testnet.
+
+Lending Protocol Contract: https://sepolia.etherscan.io/address/0x22b63f333dB05DC4ead6c781349893378ed77F70
+
+FakeUSDT Contract: https://sepolia.etherscan.io/address/0x45942dd3a289bf7c088b8ebe2c61465437616cad
 
 ## Smart Contract Functions
 ### NFTLending
