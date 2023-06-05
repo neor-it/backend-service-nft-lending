@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>NFT Search</title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+	<h1>NFT Search</h1>
+
+	<div class="search-form">
+		<input type="text" id="tokenAddress" class="search-input" placeholder="Enter token address">
+		<input type="text" id="tokenId" class="search-input" placeholder="Enter token ID">
+		<button onclick="getNFTData('nftTransfers')" class="search-button">Get NFT Transfers</button>
+		<button onclick="getNFTData('nftHistory')" class="search-button">Get NFT History</button>
+	</div>
+
+	<div class="search-form">
+		<input type="text" id="walletAddress" class="search-input" placeholder="Enter wallet address">
+		<button onclick="getNFTHistoryByWalletAddress()" class="search-button">Get NFT History By Wallet Address</button>
+	</div>
+	
+	<div class="search-form">
+		<button onclick="getAllNFTs()" class="search-button">Get All NFTs</button>
+	</div>
+
+	<script>
+		function getNFTData(dataType) {
+			var tokenAddress = document.getElementById("tokenAddress").value;
+			var tokenId = document.getElementById("tokenId").value;
+
+			if (tokenAddress !== "" && tokenId !== "") {
+				var url = "http://localhost:8080/" + dataType + "/" + tokenAddress + "/" + tokenId;
+				window.location.href = url;
+				return;
+			}
+			
+			alert("Please enter token address and token ID");
+		}
+
+		function getNFTHistoryByWalletAddress(){
+			var walletAddress = document.getElementById("walletAddress").value;
+
+			if (walletAddress !== "") {
+				window.location.href = "http://localhost:8080/nftHistoryByWalletAddress/" + walletAddress;
+				return;
+			}
+
+			alert("Please enter wallet address");
+		}
+
+		function getAllNFTs() {
+			window.location.href = "http://localhost:8080/nfts";
+		}
+	</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+h1 {
+    text-align: center;
+    margin-top: 50px;
+}
+
+.search-form {
+    text-align: center;
+    margin-top: 50px;
+}
+
+.search-input {
+    padding: 10px;
+    width: 300px;
+}
+
+.search-button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    min-width: 150px;
+    min-height: 15px;
+}
+
+.search-results {
+    margin-top: 50px;
+}
