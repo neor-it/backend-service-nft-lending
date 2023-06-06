@@ -56,7 +56,7 @@ func getEthClientAndAddress() (*ethclient.Client, common.Address, error) {
 		return nil, common.Address{}, err
 	}
 
-	contractAddress := common.HexToAddress("0x22b63f333dB05DC4ead6c781349893378ed77F70")
+	contractAddress := common.HexToAddress("0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27")
 
 	return client, contractAddress, nil
 }

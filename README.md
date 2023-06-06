@@ -23,7 +23,7 @@ docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name backendServ --rm ghcr.io/
 # Smart Contract
 Smart Contract is located in the contracts folder and is written in Solidity. It is compiled using Remix IDE and deploy to the Sepolia Testnet.
 
-Lending Protocol Contract: https://sepolia.etherscan.io/address/0x22b63f333dB05DC4ead6c781349893378ed77F70
+Lending Protocol Contract: https://sepolia.etherscan.io/address/0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27
 
 FakeUSDT Contract: https://sepolia.etherscan.io/address/0x45942dd3a289bf7c088b8ebe2c61465437616cad
 
