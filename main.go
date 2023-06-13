@@ -2,18 +2,31 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
 	"os"
 	"strconv"
 
+	_ "github.com/lib/pq"
+
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+)
+
+const (
+	sqlStatement = `INSERT INTO events (lender, borrower, tokenAddress, tokenId, transactionHash, blockNumber, signature)
+	VALUES ($1, $2, $3, $4, $5, $6, $7) `
 )
 
 type NFTInfo struct {
@@ -35,14 +48,12 @@ type Transfers struct {
 }
 
 type Event struct {
-	Owner           string `json:"owner"`
+	Lender          string `json:"lender"`
+	Borrower        string `json:"borrower"`
 	TokenId         string `json:"tokenId"`
 	TokenAddress    string `json:"nftContract"`
-	Contract        string `json:"contract"`
 	TransactionHash string `json:"transactionHash"`
 	BlockNumber     uint64 `json:"blockNumber"`
-	Borrower        string `json:"borrower"`
-	Lender          string `json:"lender"`
 	Signature       string `json:"signature"`
 }
 
@@ -50,8 +61,7 @@ func getEthClientAndAddress() (*ethclient.Client, common.Address, error) {
 	godotenv.Load()
 
 	API_KEY := os.Getenv("API_KEY")
-	log.Println("API_KEY:", API_KEY)
-	client, err := ethclient.Dial("https://sepolia.infura.io/v3/" + API_KEY)
+	client, err := ethclient.Dial("wss://sepolia.infura.io/ws/v3/" + API_KEY)
 	if err != nil {
 		return nil, common.Address{}, err
 	}
@@ -99,6 +109,9 @@ func getTransfersHandler(c echo.Context) error {
 }
 
 func getNFTHistoryHandler(c echo.Context) error {
+	db := connectToDB()
+	defer db.Close()
+
 	client, contractAddress, err := getEthClientAndAddress()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -114,7 +127,7 @@ func getNFTHistoryHandler(c echo.Context) error {
 		})
 	}
 
-	history := getNFTHistory(client, contractAddress, tokenAddress, big.NewInt(tokenId), common.HexToAddress("0x0000000000000000000000000000000000000000"))
+	history := getNFTHistory(client, contractAddress, tokenAddress, big.NewInt(tokenId), common.HexToAddress("0x0000000000000000000000000000000000000000"), db)
 
 	return c.JSON(http.StatusOK, history)
 }
@@ -142,6 +155,9 @@ func getNFTsHandler(c echo.Context) error {
 }
 
 func getNFTHistoryByWalletAddressHandler(c echo.Context) error {
+	db := connectToDB()
+	defer db.Close()
+
 	client, contractAddress, err := getEthClientAndAddress()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -150,13 +166,166 @@ func getNFTHistoryByWalletAddressHandler(c echo.Context) error {
 	}
 
 	walletAddress := common.HexToAddress(c.Param("walletAddress"))
-
-	history := getNFTHistory(client, contractAddress, common.HexToAddress("0x0000000000000000000000000000000000000000"), big.NewInt(-1), walletAddress)
+	history := getNFTHistory(client, contractAddress, common.HexToAddress("0x0000000000000000000000000000000000000000"), big.NewInt(-1), walletAddress, db)
 
 	return c.JSON(http.StatusOK, history)
 }
 
+func handleNFTAdded(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+	txHash := vLog.TxHash.Hex()
+	blockNumber := vLog.BlockNumber
+
+	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
+	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+	lender := vLog.Topics[1].Hex()
+
+	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTAdded")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleNFTCanceled(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+
+	txHash := vLog.TxHash.Hex()
+	blockNumber := vLog.BlockNumber
+
+	lender := vLog.Topics[1].Hex()
+	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
+
+	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTCanceled")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleNFTBorrowed(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+	txHash := vLog.TxHash.Hex()
+	blockNumber := vLog.BlockNumber
+
+	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
+	borrower := vLog.Topics[1].Hex()
+	lender := vLog.Topics[2].Hex()
+
+	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTBorrowed")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleNFTReturned(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+	txHash := vLog.TxHash.Hex()
+	blockNumber := vLog.BlockNumber
+	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+
+	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
+	borrower := vLog.Topics[1].Hex()
+	lender := vLog.Topics[2].Hex()
+
+	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTReturned")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleNFTWithdrawn(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+
+	txHash := vLog.TxHash.Hex()
+	blockNumber := vLog.BlockNumber
+
+	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
+	lender := vLog.Topics[1].Hex()
+
+	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTWithdrawn")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
+	// Create an event filter
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{contractAddress},
+	}
+
+	logs := make(chan types.Log)
+	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	if err != nil {
+		log.Fatalf("Failed to subscribe to event logs: %v", err)
+	}
+
+	// Listening to event logs
+	for {
+		select {
+		case err := <-sub.Err():
+			log.Fatalf("Subscription error: %v", err)
+		case vLog := <-logs:
+			eventName, err := contractAbi.EventByID(vLog.Topics[0])
+			if err != nil {
+				log.Printf("Failed to retrieve event name: %v", err)
+				continue
+			}
+
+			eventData := make(map[string]interface{})
+			err = eventName.Inputs.UnpackIntoMap(eventData, vLog.Data)
+			if err != nil {
+				log.Printf("Failed to unmarshal event data: %v", err)
+				continue
+			}
+
+			switch vLog.Topics[0].Hex() {
+			case crypto.Keccak256Hash([]byte("NFTAdded(address,address,uint256)")).Hex():
+				handleNFTAdded(vLog, eventData, db)
+			case crypto.Keccak256Hash([]byte("NFTCanceled(address,address,uint256)")).Hex():
+				handleNFTCanceled(vLog, eventData, db)
+			case crypto.Keccak256Hash([]byte("NFTBorrowed(address,address,address,uint256)")).Hex():
+				handleNFTBorrowed(vLog, eventData, db)
+			case crypto.Keccak256Hash([]byte("NFTReturned(address,address,address,uint256)")).Hex():
+				handleNFTReturned(vLog, eventData, db)
+			case crypto.Keccak256Hash([]byte("NFTWithdrawn(address,address,uint256)")).Hex():
+				handleNFTWithdrawn(vLog, eventData, db)
+			case crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex():
+				log.Println("Transfer event", vLog.Topics[0].Hex())
+			default:
+				log.Println("Unknown event", vLog.Topics[0].Hex())
+			}
+		}
+	}
+}
+
+func connectToDB() *sql.DB {
+	sqlData := "host=localhost user=postgres password=postgres dbname=testdb sslmode=disable"
+
+	db, err := sql.Open("postgres", sqlData)
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Successfully connected!")
+	return db
+}
+
 func main() {
+	client, contractAddress, err := getEthClientAndAddress()
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
+
+	db := connectToDB()
+	defer db.Close()
+
+	contractAbi := readAbi("abi.json")
+
+	go handleEvents(client, db, contractAddress, contractAbi)
+
 	e := echo.New()
 
 	// Middleware

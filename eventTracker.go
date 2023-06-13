@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"math/big"
 
@@ -9,120 +10,29 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	_ "github.com/lib/pq"
 )
 
-func trackEvents(client *ethclient.Client, contractAddress common.Address, eventSignature []byte) ([]Event, error) {
-	eventSignatureHash := crypto.Keccak256Hash(eventSignature)
-
-	query := ethereum.FilterQuery{
-		FromBlock: nil,
-		ToBlock:   nil,
-		Addresses: []common.Address{contractAddress},
-		Topics: [][]common.Hash{
-			{eventSignatureHash},
-		},
-	}
-
-	logs, err := client.FilterLogs(context.Background(), query)
-	if err != nil {
-		return nil, err
-	}
-
+func trackEvents(client *ethclient.Client, contractAddress common.Address, eventSignature []byte, db *sql.DB) ([]Event, error) {
 	var events []Event
 
-	for _, log := range logs {
-		if eventSignatureHash.Hex() == log.Topics[0].Hex() {
-			var event Event
-			owner := common.BytesToAddress(log.Topics[1].Bytes())
-			tokenId := new(big.Int).SetBytes(log.Data)
-			transactionHash := log.TxHash.Hex()
-			blockNumber := log.BlockNumber
-
-			switch eventSignatureHash.Hex() {
-
-			case crypto.Keccak256Hash([]byte("NFTAdded(address,address,uint256)")).Hex():
-				contractAddr := common.BytesToAddress(log.Address.Bytes())
-				tokenAddress := common.BytesToAddress(log.Topics[2].Bytes())
-
-				event = Event{
-					Owner:           owner.Hex(),
-					TokenId:         tokenId.String(),
-					TokenAddress:    tokenAddress.Hex(),
-					Contract:        contractAddr.Hex(),
-					TransactionHash: transactionHash,
-					BlockNumber:     blockNumber,
-					Borrower:        "",
-					Lender:          "",
-					Signature:       "NFTAdded",
-				}
-
-			case crypto.Keccak256Hash([]byte("NFTWithdrawn(address,address,uint256)")).Hex():
-				tokenAddress := common.BytesToAddress(log.Topics[2].Bytes())
-
-				event = Event{
-					Owner:           owner.Hex(),
-					TokenId:         tokenId.String(),
-					TokenAddress:    tokenAddress.Hex(),
-					Contract:        contractAddress.Hex(),
-					TransactionHash: transactionHash,
-					BlockNumber:     blockNumber,
-					Borrower:        "",
-					Lender:          "",
-					Signature:       "NFTWithdrawn",
-				}
-
-			case crypto.Keccak256Hash([]byte("NFTBorrowed(address,address,address,uint256)")).Hex():
-				borrower := common.BytesToAddress(log.Topics[1].Bytes())
-				lender := common.BytesToAddress(log.Topics[2].Bytes())
-				tokenAddress := common.BytesToAddress(log.Topics[3].Bytes())
-
-				event = Event{
-					Owner:           lender.Hex(),
-					TokenId:         tokenId.String(),
-					TokenAddress:    tokenAddress.Hex(),
-					Contract:        contractAddress.Hex(),
-					TransactionHash: transactionHash,
-					BlockNumber:     blockNumber,
-					Borrower:        borrower.Hex(),
-					Lender:          lender.Hex(),
-					Signature:       "NFTBorrowed",
-				}
-
-			case crypto.Keccak256Hash([]byte("NFTReturned(address,address,address,uint256)")).Hex():
-				borrower := common.BytesToAddress(log.Topics[1].Bytes())
-				lender := common.BytesToAddress(log.Topics[2].Bytes())
-				tokenAddress := common.BytesToAddress(log.Topics[3].Bytes())
-
-				event = Event{
-					Owner:           lender.Hex(),
-					TokenId:         tokenId.String(),
-					TokenAddress:    tokenAddress.Hex(),
-					Contract:        contractAddress.Hex(),
-					TransactionHash: transactionHash,
-					BlockNumber:     blockNumber,
-					Borrower:        borrower.Hex(),
-					Lender:          lender.Hex(),
-					Signature:       "NFTReturned",
-				}
-
-			case crypto.Keccak256Hash([]byte("NFTCanceled(address,address,uint256)")).Hex():
-				tokenAddress := common.BytesToAddress(log.Topics[2].Bytes())
-
-				event = Event{
-					Owner:           owner.Hex(),
-					TokenId:         tokenId.String(),
-					TokenAddress:    tokenAddress.Hex(),
-					Contract:        contractAddress.Hex(),
-					TransactionHash: transactionHash,
-					BlockNumber:     blockNumber,
-					Borrower:        "",
-					Lender:          "",
-					Signature:       "NFTCanceled",
-				}
-			}
-			events = append(events, event)
-		}
+	// get from db all events with eventSignature
+	rows, err := db.Query("SELECT * FROM events WHERE signature = $1", eventSignature)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	var id int
+
+	for rows.Next() {
+		var event Event
+		err = rows.Scan(&id, &event.Lender, &event.Borrower, &event.TokenAddress, &event.TokenId, &event.TransactionHash, &event.BlockNumber, &event.Signature)
+		if err != nil {
+			log.Fatal(err)
+		}
+		events = append(events, event)
+	}
+
 	return events, nil
 }
 
