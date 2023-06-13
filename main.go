@@ -231,7 +231,6 @@ func handleNFTReturned(vLog types.Log, eventData map[string]interface{}, db *sql
 }
 
 func handleNFTWithdrawn(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-
 	txHash := vLog.TxHash.Hex()
 	blockNumber := vLog.BlockNumber
 
@@ -261,7 +260,7 @@ func handleEvent(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
 }
 
 func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
-	// Create an event filter
+	// event filter
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{contractAddress},
 	}
@@ -296,9 +295,7 @@ func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.A
 	}
 }
 
-// функция для добавления пропущенных событий в базу данных (при запуске ноды), чтобы не пропустить ни одного события
 func handlePastEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
-	// get latest block number abd transaction hash from database
 	var blockNumber int64
 	var txHash string
 	err := db.QueryRow("SELECT blocknumber, transactionhash FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber, &txHash)
