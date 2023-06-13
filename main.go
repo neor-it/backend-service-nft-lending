@@ -245,6 +245,21 @@ func handleNFTWithdrawn(vLog types.Log, eventData map[string]interface{}, db *sq
 	}
 }
 
+func handleEvent(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+	switch vLog.Topics[0].Hex() {
+	case crypto.Keccak256Hash([]byte("NFTAdded(address,address,uint256)")).Hex():
+		handleNFTAdded(vLog, eventData, db)
+	case crypto.Keccak256Hash([]byte("NFTCanceled(address,address,uint256)")).Hex():
+		handleNFTCanceled(vLog, eventData, db)
+	case crypto.Keccak256Hash([]byte("NFTBorrowed(address,address,address,uint256)")).Hex():
+		handleNFTBorrowed(vLog, eventData, db)
+	case crypto.Keccak256Hash([]byte("NFTReturned(address,address,address,uint256)")).Hex():
+		handleNFTReturned(vLog, eventData, db)
+	case crypto.Keccak256Hash([]byte("NFTWithdrawn(address,address,uint256)")).Hex():
+		handleNFTWithdrawn(vLog, eventData, db)
+	}
+}
+
 func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
 	// Create an event filter
 	query := ethereum.FilterQuery{
@@ -276,28 +291,105 @@ func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.A
 				continue
 			}
 
-			switch vLog.Topics[0].Hex() {
-			case crypto.Keccak256Hash([]byte("NFTAdded(address,address,uint256)")).Hex():
-				handleNFTAdded(vLog, eventData, db)
-			case crypto.Keccak256Hash([]byte("NFTCanceled(address,address,uint256)")).Hex():
-				handleNFTCanceled(vLog, eventData, db)
-			case crypto.Keccak256Hash([]byte("NFTBorrowed(address,address,address,uint256)")).Hex():
-				handleNFTBorrowed(vLog, eventData, db)
-			case crypto.Keccak256Hash([]byte("NFTReturned(address,address,address,uint256)")).Hex():
-				handleNFTReturned(vLog, eventData, db)
-			case crypto.Keccak256Hash([]byte("NFTWithdrawn(address,address,uint256)")).Hex():
-				handleNFTWithdrawn(vLog, eventData, db)
-			case crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex():
-				log.Println("Transfer event", vLog.Topics[0].Hex())
-			default:
-				log.Println("Unknown event", vLog.Topics[0].Hex())
-			}
+			handleEvent(vLog, eventData, db)
 		}
 	}
 }
 
+// функция для добавления пропущенных событий в базу данных (при запуске ноды), чтобы не пропустить ни одного события
+func handlePastEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
+	// get latest block number abd transaction hash from database
+	var blockNumber int64
+	var txHash string
+	err := db.QueryRow("SELECT blocknumber, transactionhash FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber, &txHash)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// table is empty
+			blockNumber = 0
+		} else {
+			panic(err)
+		}
+	}
+
+	if blockNumber == 0 {
+		return
+	}
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			contractAddress,
+		},
+		FromBlock: big.NewInt(blockNumber),
+	}
+
+	logs, err := client.FilterLogs(context.Background(), query)
+	if err != nil {
+		log.Fatalf("Failed to get past events: %v", err)
+	}
+
+	for _, vLog := range logs {
+		eventName, err := contractAbi.EventByID(vLog.Topics[0])
+		if err != nil {
+			log.Printf("Failed to retrieve event name: %v", err)
+			continue
+		}
+
+		eventData := make(map[string]interface{})
+		err = eventName.Inputs.UnpackIntoMap(eventData, vLog.Data)
+		if err != nil {
+			log.Printf("Failed to unmarshal event data: %v", err)
+			continue
+		}
+
+		if txHash == string(vLog.TxHash.Hex()) {
+			// skip this event because it's already in the database
+			continue
+		}
+
+		handleEvent(vLog, eventData, db)
+	}
+}
+
+func createTable(db *sql.DB, tableName string) {
+	// check if table exists
+
+	if _, err := db.Exec("SELECT 1 FROM " + tableName + " LIMIT 1"); err != nil {
+		log.Println("Table " + tableName + " doesn't exist, creating...")
+		// create table
+		sqlStatement := `
+		CREATE TABLE events (
+			id SERIAL PRIMARY KEY,
+			lender TEXT,
+			borrower TEXT,
+			tokenAddress TEXT,
+			tokenId TEXT,
+			transactionHash TEXT,
+			blockNumber INTEGER,
+			signature TEXT
+		);`
+
+		_, err = db.Exec(sqlStatement)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("Successfully created table!")
+		return
+	}
+
+	fmt.Println("Table " + tableName + " exists!")
+}
+
 func connectToDB() *sql.DB {
-	sqlData := "host=localhost user=postgres password=postgres dbname=testdb sslmode=disable"
+	godotenv.Load()
+
+	POSTGRES_HOST := os.Getenv("POSTGRES_HOST")
+	POSTGRES_USER := os.Getenv("POSTGRES_USER")
+	POSTGRES_PASSWORD := os.Getenv("POSTGRES_PASSWORD")
+	POSTGRES_DB := os.Getenv("POSTGRES_DB")
+
+	sqlData := "host=" + POSTGRES_HOST + " user=" + POSTGRES_USER + " password=" + POSTGRES_PASSWORD + " dbname=" + POSTGRES_DB + " sslmode=disable"
 
 	db, err := sql.Open("postgres", sqlData)
 	if err != nil {
@@ -322,8 +414,14 @@ func main() {
 	db := connectToDB()
 	defer db.Close()
 
+	createTable(db, "events")
+
 	contractAbi := readAbi("abi.json")
 
+	// Handle missed events
+	handlePastEvents(client, db, contractAddress, contractAbi)
+
+	// Start listening to events in real time
 	go handleEvents(client, db, contractAddress, contractAbi)
 
 	e := echo.New()
