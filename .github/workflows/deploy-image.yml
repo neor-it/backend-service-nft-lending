@@ -35,6 +35,14 @@ jobs:
       - name: Start PostgreSQL 
         run: |
           sudo service postgresql start
+      
+      - name: Create User
+        run: |
+          sudo -u postgres psql -c "CREATE USER user WITH PASSWORD 'password';"
+
+      - name: Create Database
+        run: |
+          sudo -u postgres psql -c "CREATE DATABASE events;"
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v2
