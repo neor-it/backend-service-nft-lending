@@ -38,3 +38,11 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/backend-service-nft-lending:latest
+        env:
+          DATABASE_HOST: database
+  
+      - name: Set up Docker Compose for Server
+        run: |
+          docker-compose -f docker-compose.yml up -d server
+          sleep 10
+  
