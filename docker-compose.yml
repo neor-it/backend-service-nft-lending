@@ -17,3 +17,5 @@ services:
     image: postgres:14.3-alpine
     networks:
       - db-network
+networks:
+  db-network:
