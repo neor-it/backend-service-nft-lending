@@ -1,6 +1,6 @@
 # Backend service
 ### Backend service for NFT Lending Protocol
-<p/> 1. main.go - main file for run service on localhost or docker
+<p/> 1. main.go - main file for run service on localhost
 <p/> 1.1 NFTHistory.go - file for get history of NFTs
 <p/> 1.2 getAllNFTs.go - file for get all NFTs from smart contract
 <p/> 1.3 eventTracker.go - file for get events from smart contract
@@ -11,9 +11,10 @@
 ```
 docker pull ghcr.io/neor-it/backend-service-nft-lending:latest
 ```
-2. Run docker image
+2. Use postgresql database. Create database and set environment variables.
+3. Run docker image
 ```
-docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name backendServ --rm ghcr.io/neor-it/backend-service-nft-lending
+docker run -e API_KEY=YOUR_API_KEY -e POSTGRES_HOST=localhost -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dbName -p 8080:8080 --name backendServ --rm ghcr.io/neor-it/backend-service-nft-lending
 ```
 3. Open in browser <a href="http://localhost:8080">http://localhost:8080</a>
 
@@ -23,9 +24,8 @@ docker run -e API_KEY=YOUR_API_KEY -p 8080:8080 --name backendServ --rm ghcr.io/
 # Smart Contract
 Smart Contract is located in the contracts folder and is written in Solidity. It is compiled using Remix IDE and deploy to the Sepolia Testnet.
 
-Lending Protocol Contract: https://sepolia.etherscan.io/address/0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27
-
-FakeUSDT Contract: https://sepolia.etherscan.io/address/0x45942dd3a289bf7c088b8ebe2c61465437616cad
+<p/>Lending Protocol Contract: https://sepolia.etherscan.io/address/0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27
+<p/>FakeUSDT Contract: https://sepolia.etherscan.io/address/0x45942dd3a289bf7c088b8ebe2c61465437616cad
 
 ## Smart Contract Functions
 ### NFTLending
