@@ -75,9 +75,9 @@ jobs:
                 db:
                   image: postgres
                   environment:
-                    POSTGRES_USER: your_postgres_user
-                    POSTGRES_PASSWORD: your_postgres_password
-                    POSTGRES_DB: your_database_name
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: postgres
               EOF
               docker-compose up -d db
 
