@@ -1,0 +1,19 @@
+version: '3.5'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    networks:
+      - db-network
+  database:
+    container_name: db_auth
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    image: postgres:14.3-alpine
+    networks:
+      - db-network
