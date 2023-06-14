@@ -38,7 +38,7 @@ jobs:
       
       - name: Create User
         run: |
-          sudo -u postgres psql -c "CREATE USER 'user' WITH PASSWORD 'password';"
+          sudo -u postgres psql -c "CREATE USER test_user WITH PASSWORD 'test_password';"
 
       - name: Create Database
         run: |
