@@ -61,7 +61,7 @@ jobs:
               run: docker pull ghcr.io/${{ github.repository_owner }}/backend-service-nft-lending:latest
       
             - name: Start PostgreSQL Service
-              run: docker-compose -f ./docker-compose.yml up -d db
+              run: docker-compose -f docker-compose.yml up -d db
       
             - name: Run Backend Service
               run: docker-compose up -d backend-service
