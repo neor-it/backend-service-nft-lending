@@ -43,5 +43,5 @@ jobs:
   
       - name: Set up Docker Compose for Server
         run: |
-          docker-compose -f docker-compose.yml up -d server
+          docker-compose -f docker-compose.yml up -d database
           sleep 10
