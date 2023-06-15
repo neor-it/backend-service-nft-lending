@@ -2,6 +2,9 @@ version: '3.5'
 
 services:
   database:
+    networks:
+      backend-network:
+        ipv4_address: 172.18.0.2
     container_name: database
     ports:
       - "5432:5432"
@@ -9,8 +12,6 @@ services:
       - POSTGRES_PASSWORD=root
       - POSTGRES_USER=admin
     image: postgres:14.3-alpine
-    networks:
-      - backend-network
 
 networks:
   backend-network:
