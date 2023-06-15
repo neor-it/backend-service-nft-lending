@@ -12,5 +12,19 @@ services:
     networks:
       - backend-network
 
+  server:
+    container_name: server
+    build:
+      context: .
+    ports:
+      - "8080:8080"  # Проброс порта для сервера
+    environment:
+      - POSTGRES_HOST=database
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=postgres
+    networks:
+      - backend-network
+
 networks:
   backend-network:
