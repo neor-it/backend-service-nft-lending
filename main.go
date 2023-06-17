@@ -295,23 +295,24 @@ func handleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.A
 	}
 }
 
-func handlePastEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
+func getLastProcessedBlockNumber(db *sql.DB) int64 {
 	var blockNumber int64
-	var txHash string
-	err := db.QueryRow("SELECT blocknumber, transactionhash FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber, &txHash)
+	err := db.QueryRow("SELECT blocknumber FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// table is empty
 			blockNumber = 0
-		} else {
+		} else { // unexpected error
 			panic(err)
 		}
 	}
 
-	if blockNumber == 0 {
-		return
-	}
+	return blockNumber
+}
+
+func handlePastEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
+	blockNumber := getLastProcessedBlockNumber(db)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -339,11 +340,6 @@ func handlePastEvents(client *ethclient.Client, db *sql.DB, contractAddress comm
 			continue
 		}
 
-		if txHash == string(vLog.TxHash.Hex()) {
-			// skip this event because it's already in the database
-			continue
-		}
-
 		handleEvent(vLog, eventData, db)
 	}
 }
@@ -352,7 +348,7 @@ func createTable(db *sql.DB, tableName string) {
 	// check if table exists
 
 	if _, err := db.Exec("SELECT 1 FROM " + tableName + " LIMIT 1"); err != nil {
-		log.Println("Table " + tableName + " doesn't exist, creating...")
+		log.Printf("Table %s doesn't exist, creating...", tableName)
 		// create table
 		sqlStatement := `
 		CREATE TABLE events (
@@ -371,11 +367,11 @@ func createTable(db *sql.DB, tableName string) {
 			panic(err)
 		}
 
-		fmt.Println("Successfully created table!")
+		log.Println("Successfully created table!")
 		return
 	}
 
-	fmt.Println("Table " + tableName + " exists!")
+	log.Printf("Table %s exists!", tableName)
 }
 
 func connectToDB() *sql.DB {
@@ -398,7 +394,7 @@ func connectToDB() *sql.DB {
 		panic(err)
 	}
 
-	fmt.Println("Successfully connected!")
+	log.Println("Successfully connected!")
 	return db
 }
 
