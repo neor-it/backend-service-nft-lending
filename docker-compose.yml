@@ -1,16 +1,32 @@
-version: '3.5'
+version: "3.9"
 
 services:
-  database:
-    container_name: database
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=root
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_USER=admin
-    image: postgres:14.3-alpine
+    volumes:
+      - data:/var/lib/postgresql/data
     networks:
-      - backend-network
+      - app-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+    networks:
+      - app-network
 
 networks:
-  backend-network:
+  app-network:
+    driver: bridge
+
+volumes:
+  data:
