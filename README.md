@@ -7,16 +7,28 @@
 <p/> 2. index.html - main page for service with form for getting stats and list of NFTs
 
 # Start with docker
-1. Pull image from docker hub
+1. Pull database image
 ```
-docker pull ghcr.io/neor-it/backend-service-nft-lending:latest
+docker pull ghcr.io/neor-it/backend-service-nft-lending/postgres:latest
 ```
-2. Use postgresql database. Create database and set environment variables.
-3. Run docker image
+2. Pull backend service image
 ```
-docker run -e API_KEY=YOUR_API_KEY -e POSTGRES_HOST=localhost -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=dbName -p 8080:8080 --name backendServ --rm ghcr.io/neor-it/backend-service-nft-lending
+docker pull ghcr.io/neor-it/backend-service-nft-lending/backend:latest
 ```
-3. Open in browser <a href="http://localhost:8080">http://localhost:8080</a>
+3. Create network
+```
+docker network create backend-network
+```
+4. Run database
+```
+docker run -d --name=postgres --net=backend-network -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=root -p 5432:5432 --rm ghcr.io/neor-it/backend-service-nft-lending/postgres:latest
+```
+5. Run backend service (Get API_KEY from <a href="https://www.infura.io/">infura.io/</a>)
+```
+docker run -d --name=backend --net=backend-network -p 8080:8080 -e API_KEY=YOUR_API_KEY -e POSTGRES_HOST=postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=root -e POSTGRES_DB=postgres ghcr.io/neor-it/backend-service-nft-lending/backend:latest
+```
+
+6. Open in browser <a href="http://localhost:8080">http://localhost:8080</a>
 
 ## API
 1. <a href="https://www.infura.io/">infura.io/</a> - API_KEY for get access to Sepolia Testnet
