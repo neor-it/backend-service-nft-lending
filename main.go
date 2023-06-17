@@ -235,7 +235,7 @@ func handleNFTWithdrawn(vLog types.Log, eventData map[string]interface{}, db *sq
 	blockNumber := vLog.BlockNumber
 
 	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
-	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
+	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
 	lender := vLog.Topics[1].Hex()
 
 	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTWithdrawn")
