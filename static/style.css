@@ -27,6 +27,17 @@ h1 {
     min-height: 15px;
 }
 
+.search-button-2 {
+    padding: 10px 20px;
+    background-color: #cb0404;
+    color: white;
+    border: none;
+    cursor: pointer;
+    min-width: 150px;
+    min-height: 15px;
+}
+
+
 .search-results {
     margin-top: 50px;
 }
