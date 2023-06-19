@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"GethBackServ/contracthandler"
-	"GethBackServ/database"
-	"GethBackServ/httphandler"
+	"GethBackServ/internal/endpoint/httphandler"
+	"GethBackServ/internal/service/contracthandler"
+	"GethBackServ/internal/service/database"
 
 	_ "github.com/lib/pq"
 
@@ -24,7 +24,7 @@ func main() {
 
 	database.CreateTable(db, "events")
 
-	contractAbi := contracthandler.ReadAbi("abi.json")
+	contractAbi := contracthandler.ReadAbi("./api/abi.json")
 
 	// Handle missed events
 	httphandler.HandleMissedEvents(client, db, contractAddress, contractAbi)
