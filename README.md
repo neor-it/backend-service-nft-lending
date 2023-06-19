@@ -1,6 +1,6 @@
 # Backend service
 ### Backend service for NFT Lending Protocol
-<p/> 1. main.go - main file for run service on localhost
+<p/> main.go - main file for run service on localhost
 <h4>Package contracthandler</h4>
 <p/> 1. ethUtil.go -  has the GetEthClientAndAddress() and ReadAbi() functions.
 <p/> 2. eventTracker.go - has the function GetTransfersByAddress() which is called from httphandler\httphandlers.go
