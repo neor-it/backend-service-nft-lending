@@ -1,21 +1,21 @@
 # Backend service
 ### Backend service for NFT Lending Protocol
 <p/> 1. main.go - main file for run service on localhost
-<h5>Package contracthandler</h5>
+<h4>Package contracthandler</h4>
 <p/> 1. ethUtil.go -  has the GetEthClientAndAddress() and ReadAbi() functions.
 <p/> 2. eventTracker.go - has the function GetTransfersByAddress() which is called from httphandler\httphandlers.go
 <p/> 3. getAllNFTs.go - has the function GetNFTs() which returns a list of NFTInfo structs.
 <p/> 4. NFTHistory.go - has a function that returns a slice of structure.Event
-<h5>Package database</h5>
+<h4>Package database</h4>
 <p/> 1. dbManagement.go - has functions to connect to the database and create the table if it doesn't exist.
 <p/> 2.  getLastBlocknumber.go - has function GetLastProcessedBlockNumber which returns the last block number processed by the database.
 <p/> 3. trackEvents.go - has a function TrackEvents() that takes in an ethclient.Client, a common.Address, a []byte, and a *sql.DB and returns a []structure.Event and an error.
-<h5>Package httphandler</h5>
+<h4>Package httphandler</h4>
 <p/> 1. eventHandlers.go - has all the event handlers for the events emitted by the contract.
 <p/> 2. httpHandlers.go - has the handlers for the routes of the server.
-<h5>Package structure</h5>
+<h4>Package structure</h4>
 <p/> structures.go - has all the structures used in the project.
-<h5>Web</h5>
+<h4>Web</h4>
 <p/> 1. index.html - main page for service with form for getting stats and list of NFTs
 
 # Start with docker
