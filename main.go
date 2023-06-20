@@ -27,10 +27,10 @@ func main() {
 	contractAbi := contracthandler.ReadAbi("./api/abi.json")
 
 	// Handle missed events
-	httphandler.HandleMissedEvents(client, db, contractAddress, contractAbi)
+	contracthandler.HandleMissedEvents(client, db, contractAddress, contractAbi)
 
 	// Start listening events in real time
-	go httphandler.HandleEvents(client, db, contractAddress, contractAbi)
+	go contracthandler.HandleEvents(client, db, contractAddress, contractAbi)
 
 	e := echo.New()
 
