@@ -33,19 +33,3 @@ func GetEthClientInfo() (*structure.EthClientInfo, error) {
 	}
 	return instance, nil
 }
-
-func ReadAbi(fileName string) (abi.ABI, error) {
-	fileAbi, err := os.ReadFile(fileName)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	contractAbi, err := abi.JSON(bytes.NewReader(fileAbi))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return contractAbi, nil
-}
