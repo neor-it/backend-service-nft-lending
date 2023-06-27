@@ -13,13 +13,6 @@ import (
 )
 
 func GetTransfersHandler(c echo.Context) error {
-	client, contractAddress, err := contracthandler.GetEthClientAndAddress()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
-	}
-
 	tokenAddress := common.HexToAddress(c.Param("tokenAddress"))
 	tokenId, err := strconv.ParseInt(c.Param("tokenId"), 10, 64)
 	if err != nil {
@@ -28,16 +21,25 @@ func GetTransfersHandler(c echo.Context) error {
 		})
 	}
 
-	transfers := contracthandler.GetTransfersByAddress(client, contractAddress, tokenAddress, big.NewInt(tokenId))
+	transfers, err := contracthandler.GetTransfersByAddress(tokenAddress, tokenId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusOK, transfers)
 }
 
 func GetNFTHistoryHandler(c echo.Context) error {
-	db := database.ConnectToDB()
-	defer db.Close()
+	db, err := database.GetConnection()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
 
-	client, contractAddress, err := contracthandler.GetEthClientAndAddress()
+	ethInfo, err := contracthandler.GetEthClientInfo()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
@@ -52,23 +54,32 @@ func GetNFTHistoryHandler(c echo.Context) error {
 		})
 	}
 
-	history := contracthandler.GetNFTHistory(client, contractAddress, tokenAddress, big.NewInt(tokenId), common.HexToAddress("0x0000000000000000000000000000000000000000"), db)
-
-	return c.JSON(http.StatusOK, history)
-}
-
-func GetNFTsHandler(c echo.Context) error {
-	client, contractAddress, err := contracthandler.GetEthClientAndAddress()
-
+	history, err := contracthandler.GetNFTHistory(ethInfo.ContractAddress, tokenAddress, big.NewInt(tokenId), common.HexToAddress("0x0000000000000000000000000000000000000000"), db.DB)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
 	}
 
-	contractAbi := contracthandler.ReadAbi("./api/abi.json")
+	return c.JSON(http.StatusOK, history)
+}
 
-	nftInfoList, err := contracthandler.GetNFTs(client, contractAbi, contractAddress)
+func GetNFTsHandler(c echo.Context) error {
+	ethInfo, err := contracthandler.GetEthClientInfo()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	contractAbi, err := contracthandler.ReadAbi("./api/abi.json")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	nftInfoList, err := contracthandler.GetNFTs(ethInfo.Client, contractAbi, ethInfo.ContractAddress)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "NFTs not found",
@@ -76,14 +87,17 @@ func GetNFTsHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, nftInfoList)
-
 }
 
 func GetNFTHistoryByWalletAddressHandler(c echo.Context) error {
-	db := database.ConnectToDB()
-	defer db.Close()
+	db, err := database.GetConnection()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
 
-	client, contractAddress, err := contracthandler.GetEthClientAndAddress()
+	ethInfo, err := contracthandler.GetEthClientInfo()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
@@ -91,7 +105,12 @@ func GetNFTHistoryByWalletAddressHandler(c echo.Context) error {
 	}
 
 	walletAddress := common.HexToAddress(c.Param("walletAddress"))
-	history := contracthandler.GetNFTHistory(client, contractAddress, common.HexToAddress("0x0000000000000000000000000000000000000000"), big.NewInt(-1), walletAddress, db)
+	history, err := contracthandler.GetNFTHistory(ethInfo.ContractAddress, common.HexToAddress("0x0000000000000000000000000000000000000000"), big.NewInt(-1), walletAddress, db.DB)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
 
 	return c.JSON(http.StatusOK, history)
 }
