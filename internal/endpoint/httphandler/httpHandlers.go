@@ -72,14 +72,7 @@ func GetNFTsHandler(c echo.Context) error {
 		})
 	}
 
-	contractAbi, err := contracthandler.ReadAbi("./api/abi.json")
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
-	}
-
-	nftInfoList, err := contracthandler.GetNFTs(ethInfo.Client, contractAbi, ethInfo.ContractAddress)
+	nftInfoList, err := contracthandler.GetNFTs(ethInfo.Client, ethInfo.ContractAddress)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "NFTs not found",
