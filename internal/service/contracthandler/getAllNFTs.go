@@ -3,7 +3,6 @@ package contracthandler
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"GethBackServ/internal/service/structure"
 
@@ -33,9 +32,8 @@ func callGetAllNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddre
 
 func GetNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddress common.Address) ([]structure.NFTInfo, error) {
 	data, err := callGetAllNFTs(client, contractAbi, contractAddress)
-
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var nftInfoList []structure.NFTInfo
@@ -43,7 +41,6 @@ func GetNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddress comm
 	for i := range data {
 		jsonData, err := json.Marshal(data[i])
 		if err != nil {
-			log.Println("Error marshaling data:", err)
 			return nil, err
 		}
 
@@ -54,7 +51,6 @@ func GetNFTs(client *ethclient.Client, contractAbi abi.ABI, contractAddress comm
 		err = json.Unmarshal(jsonData, &nftInfo)
 
 		if err != nil {
-			log.Println("Error unmarshaling data:", err)
 			return nil, err
 		}
 
