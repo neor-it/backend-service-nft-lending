@@ -1,85 +1,192 @@
 package contracthandler
 
 import (
+	"GethBackServ/internal/endpoint/abigencontract"
 	"GethBackServ/internal/service/database"
+	"GethBackServ/internal/service/structure"
 	"context"
 	"database/sql"
 	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// HandleEvents handles all events from contract and saves them to database using HandleEvent function
-func HandleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
-	// event filter
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddress},
-	}
-
-	logs := make(chan types.Log)
-	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+// HandleEvents - subscribe on events, handle them and write to database
+func HandleEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbigen *abigencontract.MainFilterer) error {
+	// Subscribe on event NFTAdded
+	addedEvents, addedSubscription, err := subscriptionOnNFTAdded(client, contractAddress, contractAbigen)
 	if err != nil {
-		log.Fatalf("Failed to subscribe to event logs: %v", err)
+		return err
 	}
+	defer addedSubscription.Unsubscribe()
 
-	// Listening to event logs
+	// Subscribe on event NFTCanceled
+	canceledEvents, canceledSubscription, err := subscriptionOnNFTCanceled(client, contractAddress, contractAbigen)
+	if err != nil {
+		return err
+	}
+	defer canceledSubscription.Unsubscribe()
+
+	// Subscribe on event NFTReturned
+	returnedEvents, returnedSubscription, err := subscriptionOnNFTReturned(client, contractAddress, contractAbigen)
+	if err != nil {
+		return err
+	}
+	defer returnedSubscription.Unsubscribe()
+
+	// Subscribe on event NFTWithdrawn
+	withdrawnEvents, withdrawnSubscription, err := subscriptionOnNFTWithdrawn(client, contractAddress, contractAbigen)
+	if err != nil {
+		return err
+	}
+	defer withdrawnSubscription.Unsubscribe()
+
+	// Subscribe on event NFTBorrowed
+	borrowedEvents, borrowedSubscription, err := subscriptionOnNFTBorrowed(client, contractAddress, contractAbigen)
+	if err != nil {
+		return err
+	}
+	defer borrowedSubscription.Unsubscribe()
+
 	for {
 		select {
-		case err := <-sub.Err():
-			log.Fatalf("Subscription error: %v", err)
-		case vLog := <-logs:
-			eventName, err := contractAbi.EventByID(vLog.Topics[0])
-			if err != nil {
-				log.Printf("Failed to retrieve event name: %v", err)
-				continue
-			}
+		case event := <-addedEvents:
+			database.HandleNFTAdded(event, db)
+			go HandleTransfers(client, db, event)
 
-			eventData := make(map[string]interface{})
-			err = eventName.Inputs.UnpackIntoMap(eventData, vLog.Data)
-			if err != nil {
-				log.Printf("Failed to unmarshal event data: %v", err)
-				continue
-			}
+		case event := <-canceledEvents:
+			database.HandleNFTCanceled(event, db)
 
-			database.HandleEvent(vLog, eventData, db)
+		case event := <-returnedEvents:
+			database.HandleNFTReturned(event, db)
+
+		case event := <-withdrawnEvents:
+			database.HandleNFTWithdrawn(event, db)
+
+		case event := <-borrowedEvents:
+			database.HandleNFTBorrowed(event, db)
 		}
 	}
 }
 
-func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbi abi.ABI) {
-	blockNumber := database.GetLastProcessedBlockNumber(db)
+func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract.MainNFTAdded) error {
+	contractAddress := event.Raw.Address
+	tokenAddress := event.NFTAddress
+
+	if structure.SubscriptionMap[tokenAddress] { // if subscription on this token already exists - return
+		return nil
+	}
+
+	sub, logs, err := subscribeOnTransferEvent(client, event)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case err := <-sub.Err():
+			return err
+		case event := <-logs:
+			log.Println("Transfer event", event)
+			transferEventExists, err := database.GetTransferEvent(event, db)
+			if err != nil {
+				return err
+			}
+
+			if !transferEventExists {
+				database.HandleTransfer(contractAddress, event, db)
+			}
+		}
+	}
+}
+
+func HandleTransferEvents(client *ethclient.Client, tokenAddress common.Address, tokenId *big.Int) error {
+	ethInfo, _ := GetEthClientInfo()
+	db, err := database.GetConnection()
+	if err != nil {
+		return err
+	}
+
+	transferEventSignature := crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)"))
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			contractAddress,
+			tokenAddress,
 		},
-		FromBlock: big.NewInt(blockNumber),
+		Topics: [][]common.Hash{
+			{
+				transferEventSignature,
+			},
+		},
 	}
 
 	logs, err := client.FilterLogs(context.Background(), query)
+
 	if err != nil {
-		log.Fatalf("Failed to get missed events: %v", err)
+		return err
 	}
 
-	for _, vLog := range logs {
-		eventName, err := contractAbi.EventByID(vLog.Topics[0])
+	for _, log := range logs {
+		tokenIdLog := log.Topics[3].Big()
+
+		transferEventExists, err := database.GetTransferEvent(log, db.DB)
 		if err != nil {
-			log.Printf("Failed to retrieve event name: %v", err)
+			return err
+		}
+
+		if transferEventExists {
 			continue
 		}
 
-		eventData := make(map[string]interface{})
-		err = eventName.Inputs.UnpackIntoMap(eventData, vLog.Data)
-		if err != nil {
-			log.Printf("Failed to unmarshal event data: %v", err)
-			continue
+		if tokenIdLog.Cmp(tokenId) == 0 {
+			database.HandleTransfer(ethInfo.ContractAddress, log, db.DB)
 		}
-
-		database.HandleEvent(vLog, eventData, db)
 	}
+
+	return nil
+}
+
+func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbigen *abigencontract.MainFilterer) error {
+	blockNumber, err := database.GetLastProcessedBlockNumber(db)
+	if err != nil {
+		return err
+	}
+
+	filterQuery := &bind.FilterOpts{
+		Start:   uint64(blockNumber),
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	err = processNFTAddedEvents(contractAbigen, filterQuery, db)
+	if err != nil {
+		return err
+	}
+
+	err = processNFTCanceledEvents(contractAbigen, filterQuery, db)
+	if err != nil {
+		return err
+	}
+
+	err = processNFTReturnedEvents(contractAbigen, filterQuery, db)
+	if err != nil {
+		return err
+	}
+
+	err = processNFTWithdrawnEvents(contractAbigen, filterQuery, db)
+	if err != nil {
+		return err
+	}
+
+	err = processNFTBorrowedEvents(contractAbigen, filterQuery, db)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
