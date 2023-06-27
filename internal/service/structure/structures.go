@@ -1,5 +1,12 @@
 package structure
 
+import (
+	"database/sql"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
+
 type NFTInfo struct {
 	OwnerAddress    string `json:"owner"`
 	NewOwnerAddress string `json:"newOwner"`
@@ -13,9 +20,12 @@ type NFTInfo struct {
 }
 
 type Transfers struct {
-	FromAddress string `json:"from"`
-	ToAddress   string `json:"to"`
-	TokenID     int    `json:"tokenId"`
+	FromAddress     string `json:"from"`
+	ToAddress       string `json:"to"`
+	TokenAddress    string `json:"tokenAddress"`
+	TokenId         string `json:"tokenId"`
+	TransactionHash string `json:"transactionHash"`
+	BlockNumber     uint64 `json:"blockNumber"`
 }
 
 type Event struct {
@@ -27,3 +37,14 @@ type Event struct {
 	BlockNumber     uint64 `json:"blockNumber"`
 	Signature       string `json:"signature"`
 }
+
+type DBConnection struct {
+	DB *sql.DB
+}
+
+type EthClientInfo struct {
+	Client          *ethclient.Client
+	ContractAddress common.Address
+}
+
+var SubscriptionMap = make(map[common.Address]bool)

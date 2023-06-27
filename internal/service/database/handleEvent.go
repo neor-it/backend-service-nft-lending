@@ -1,12 +1,13 @@
 package database
 
 import (
+	"GethBackServ/internal/endpoint/abigencontract"
+	"GethBackServ/internal/service/structure"
 	"database/sql"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (
@@ -14,91 +15,110 @@ const (
 	VALUES ($1, $2, $3, $4, $5, $6, $7) `
 )
 
-func handleNFTAdded(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-	txHash := vLog.TxHash.Hex()
-	blockNumber := vLog.BlockNumber
+func HandleNFTAdded(event *abigencontract.MainNFTAdded, db *sql.DB) error {
+	txHash := event.Raw.TxHash.Hex()
+	blockNumber := event.Raw.BlockNumber
 
-	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
-	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
-	lender := vLog.Topics[1].Hex()
+	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
+	tokenId := fmt.Sprintf("%v", event.TokenId)
+	lender := event.Owner.Hex()
 
 	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTAdded")
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
-func handleNFTCanceled(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
+func HandleNFTCanceled(event *abigencontract.MainNFTCanceled, db *sql.DB) error {
+	txHash := event.Raw.TxHash.Hex()
+	blockNumber := event.Raw.BlockNumber
 
-	txHash := vLog.TxHash.Hex()
-	blockNumber := vLog.BlockNumber
-
-	lender := vLog.Topics[1].Hex()
-	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
-	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
+	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
+	tokenId := fmt.Sprintf("%v", event.TokenId)
+	lender := event.Owner.Hex()
 
 	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTCanceled")
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
-func handleNFTBorrowed(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-	txHash := vLog.TxHash.Hex()
-	blockNumber := vLog.BlockNumber
+func HandleNFTBorrowed(event *abigencontract.MainNFTBorrowed, db *sql.DB) error {
+	txHash := event.Raw.TxHash.Hex()
+	blockNumber := event.Raw.BlockNumber
 
-	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
-	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
-	borrower := vLog.Topics[1].Hex()
-	lender := vLog.Topics[2].Hex()
+	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
+	tokenId := fmt.Sprintf("%v", event.TokenId)
+	lender := event.Lender.Hex()
+	borrower := event.Borrower.Hex()
 
 	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTBorrowed")
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
-func handleNFTReturned(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-	txHash := vLog.TxHash.Hex()
-	blockNumber := vLog.BlockNumber
-	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
+func HandleNFTReturned(event *abigencontract.MainNFTReturned, db *sql.DB) error {
+	txHash := event.Raw.TxHash.Hex()
+	blockNumber := event.Raw.BlockNumber
 
-	tokenAddress := common.HexToAddress(vLog.Topics[3].Hex())
-	borrower := vLog.Topics[1].Hex()
-	lender := vLog.Topics[2].Hex()
+	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
+	tokenId := fmt.Sprintf("%v", event.TokenId)
+	lender := event.Lender.Hex()
+	borrower := event.Borrower.Hex()
 
 	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTReturned")
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
-func handleNFTWithdrawn(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-	txHash := vLog.TxHash.Hex()
-	blockNumber := vLog.BlockNumber
+func HandleNFTWithdrawn(event *abigencontract.MainNFTWithdrawn, db *sql.DB) error {
 
-	tokenId := fmt.Sprintf("%v", eventData["tokenId"])
-	tokenAddress := common.HexToAddress(vLog.Topics[2].Hex())
-	lender := vLog.Topics[1].Hex()
+	txHash := event.Raw.TxHash.Hex()
+	blockNumber := event.Raw.BlockNumber
+
+	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
+	tokenId := fmt.Sprintf("%v", event.TokenId)
+	lender := event.Owner.Hex()
 
 	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTWithdrawn")
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
-// HandleEvent handles the event and inserts it into the database if it is a valid event
-func HandleEvent(vLog types.Log, eventData map[string]interface{}, db *sql.DB) {
-	switch vLog.Topics[0].Hex() {
-	case crypto.Keccak256Hash([]byte("NFTAdded(address,address,uint256)")).Hex():
-		handleNFTAdded(vLog, eventData, db)
-	case crypto.Keccak256Hash([]byte("NFTCanceled(address,address,uint256)")).Hex():
-		handleNFTCanceled(vLog, eventData, db)
-	case crypto.Keccak256Hash([]byte("NFTBorrowed(address,address,address,uint256)")).Hex():
-		handleNFTBorrowed(vLog, eventData, db)
-	case crypto.Keccak256Hash([]byte("NFTReturned(address,address,address,uint256)")).Hex():
-		handleNFTReturned(vLog, eventData, db)
-	case crypto.Keccak256Hash([]byte("NFTWithdrawn(address,address,uint256)")).Hex():
-		handleNFTWithdrawn(vLog, eventData, db)
+func HandleTransfer(contractAddress common.Address, event types.Log, db *sql.DB) error {
+	tokenAddress := event.Address.Hex()
+	from := event.Topics[1].Hex()
+	to := event.Topics[2].Hex()
+	tokenId := event.Topics[3].Big().Uint64()
+	blockNumber := event.BlockNumber
+	txHash := event.TxHash.Hex()
+
+	nContractAddress := structure.NormalizeAddress(contractAddress.Hex())
+	nFrom := structure.NormalizeAddress(from)
+	nTo := structure.NormalizeAddress(to)
+
+	if nContractAddress == nFrom || nContractAddress == nTo {
+		sqlStatement := `INSERT INTO transfers (fromAddress, toAddress, tokenAddress, tokenId, transactionHash, blockNumber)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+
+		_, err := db.Exec(sqlStatement, from, to, tokenAddress, tokenId, txHash, blockNumber)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

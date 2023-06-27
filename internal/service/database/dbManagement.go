@@ -1,6 +1,7 @@
 package database
 
 import (
+	"GethBackServ/internal/service/structure"
 	"database/sql"
 	"log"
 	"os"
@@ -8,7 +9,21 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func ConnectToDB() *sql.DB {
+var instance *structure.DBConnection
+
+func GetConnection() (*structure.DBConnection, error) {
+	if instance == nil {
+		conn, err := connectToDB()
+		if err != nil {
+			return nil, err
+		}
+		instance = &structure.DBConnection{DB: conn}
+	}
+
+	return instance, nil
+}
+
+func connectToDB() (*sql.DB, error) {
 	godotenv.Load()
 
 	POSTGRES_HOST := os.Getenv("POSTGRES_HOST")
@@ -20,19 +35,19 @@ func ConnectToDB() *sql.DB {
 
 	db, err := sql.Open("postgres", sqlData)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	log.Println("Successfully connected!")
-	return db
+	return db, nil
 }
 
-func CreateTable(db *sql.DB, tableName string) {
+func CreateTable(db *sql.DB, tableName string) error {
 	// check if table exists
 	if _, err := db.Exec("SELECT 1 FROM " + tableName + " LIMIT 1"); err != nil {
 		log.Printf("Table %s doesn't exist, creating...", tableName)
@@ -51,12 +66,29 @@ func CreateTable(db *sql.DB, tableName string) {
 
 		_, err = db.Exec(sqlStatement)
 		if err != nil {
-			panic(err)
+			return err
+		}
+
+		sqlStatement = `
+		CREATE TABLE transfers (
+			id SERIAL PRIMARY KEY,
+			fromAddress TEXT,
+			toAddress TEXT,
+			tokenAddress TEXT,
+			tokenId TEXT,
+			transactionHash TEXT,
+			blockNumber INTEGER
+		);`
+
+		_, err = db.Exec(sqlStatement)
+		if err != nil {
+			return err
 		}
 
 		log.Println("Successfully created table!")
-		return
+		return nil
 	}
 
 	log.Printf("Table %s exists!", tableName)
+	return nil
 }
