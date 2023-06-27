@@ -24,7 +24,6 @@ func GetLastProcessedBlockNumber(db *sql.DB) (int64, error) {
 }
 
 func GetTransferEvent(log types.Log, db *sql.DB) (bool, error) {
-
 	txHash := log.TxHash.Hex()
 	rows, err := db.Query("SELECT * FROM transfers WHERE transactionhash = $1", txHash)
 	if err != nil {
