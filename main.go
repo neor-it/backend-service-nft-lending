@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"GethBackServ/internal/endpoint/abigencontract"
 	"GethBackServ/internal/endpoint/httphandler"
 	"GethBackServ/internal/service/contracthandler"
 	"GethBackServ/internal/service/database"
@@ -14,23 +15,29 @@ import (
 )
 
 func main() {
-	client, contractAddress, err := contracthandler.GetEthClientAndAddress()
+	ethInfo, err := contracthandler.GetEthClientInfo()
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	db := database.ConnectToDB()
-	defer db.Close()
+	db, err := database.GetConnection()
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
 
-	database.CreateTable(db, "events")
+	database.CreateTable(db.DB, "events")
 
-	contractAbi := contracthandler.ReadAbi("./api/abi.json")
+	// Abigen
+	contractAbigen, err := abigencontract.NewMainFilterer(ethInfo.ContractAddress, ethInfo.Client)
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
 
 	// Handle missed events
-	contracthandler.HandleMissedEvents(client, db, contractAddress, contractAbi)
+	contracthandler.HandleMissedEvents(ethInfo.Client, db.DB, ethInfo.ContractAddress, contractAbigen)
 
 	// Start listening events in real time
-	go contracthandler.HandleEvents(client, db, contractAddress, contractAbi)
+	go contracthandler.HandleEvents(ethInfo.Client, db.DB, ethInfo.ContractAddress, contractAbigen)
 
 	e := echo.New()
 
