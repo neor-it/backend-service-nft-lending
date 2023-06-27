@@ -1,6 +1,7 @@
 package contracthandler
 
 import (
+	"GethBackServ/internal/service/structure"
 	"bytes"
 	"log"
 	"os"
@@ -11,21 +12,29 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func GetEthClientAndAddress() (*ethclient.Client, common.Address, error) {
-	godotenv.Load()
+var instance *structure.EthClientInfo
 
-	API_KEY := os.Getenv("API_KEY")
-	client, err := ethclient.Dial("wss://sepolia.infura.io/ws/v3/" + API_KEY)
-	if err != nil {
-		return nil, common.Address{}, err
+func GetEthClientInfo() (*structure.EthClientInfo, error) {
+	if instance == nil {
+		godotenv.Load()
+
+		API_KEY := os.Getenv("API_KEY")
+		client, err := ethclient.Dial("wss://sepolia.infura.io/ws/v3/" + API_KEY)
+		if err != nil {
+			return nil, err
+		}
+		contractAddress := common.HexToAddress("0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27")
+
+		instance = &structure.EthClientInfo{
+			Client:          client,
+			ContractAddress: contractAddress,
+		}
+
 	}
-
-	contractAddress := common.HexToAddress("0x7ed82e52689d7c542c3f8ca255cd921c6fc24e27")
-
-	return client, contractAddress, nil
+	return instance, nil
 }
 
-func ReadAbi(fileName string) abi.ABI {
+func ReadAbi(fileName string) (abi.ABI, error) {
 	fileAbi, err := os.ReadFile(fileName)
 
 	if err != nil {
@@ -38,5 +47,5 @@ func ReadAbi(fileName string) abi.ABI {
 		log.Fatal(err)
 	}
 
-	return contractAbi
+	return contractAbi, nil
 }
