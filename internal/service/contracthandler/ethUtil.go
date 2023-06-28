@@ -2,11 +2,8 @@ package contracthandler
 
 import (
 	"GethBackServ/internal/service/structure"
-	"bytes"
-	"log"
 	"os"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
