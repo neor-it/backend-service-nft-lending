@@ -6,12 +6,12 @@ import (
 	"GethBackServ/internal/service/structure"
 	"context"
 	"database/sql"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -92,7 +92,6 @@ func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract
 		case err := <-sub.Err():
 			return err
 		case event := <-logs:
-			log.Println("Transfer event", event)
 			transferEventExists, err := database.GetTransferEvent(event, db)
 			if err != nil {
 				return err
@@ -186,6 +185,27 @@ func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress co
 	err = processNFTBorrowedEvents(contractAbigen, filterQuery, db)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func HandleMissedTransfers(ethInfo *structure.EthClientInfo, db *sql.DB) error {
+	tokenAddresses, tokenIds, err := database.GetAllTokenAddressesAndIds(db)
+	if err != nil {
+		return err
+	}
+
+	contractAddress := ethInfo.ContractAddress
+
+	for i, tokenAddress := range tokenAddresses {
+		event := &abigencontract.MainNFTAdded{
+			NFTAddress: common.HexToAddress(tokenAddress),
+			TokenId:    big.NewInt(tokenIds[i]),
+			Raw:        types.Log{Address: contractAddress},
+		}
+		go HandleTransfers(ethInfo.Client, db, event)
+
 	}
 
 	return nil
