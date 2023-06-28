@@ -49,11 +49,8 @@ func connectToDB() (*sql.DB, error) {
 
 func CreateTable(db *sql.DB, tableName string) error {
 	// check if table exists
-	if _, err := db.Exec("SELECT 1 FROM " + tableName + " LIMIT 1"); err != nil {
-		log.Printf("Table %s doesn't exist, creating...", tableName)
-		// create table
-		sqlStatement := `
-		CREATE TABLE events (
+	sqlStatement := `
+		CREATE TABLE IF NOT EXISTS events (
 			id SERIAL PRIMARY KEY,
 			lender TEXT,
 			borrower TEXT,
@@ -64,13 +61,13 @@ func CreateTable(db *sql.DB, tableName string) error {
 			signature TEXT
 		);`
 
-		_, err = db.Exec(sqlStatement)
-		if err != nil {
-			return err
-		}
+	_, err := db.Exec(sqlStatement)
+	if err != nil {
+		return err
+	}
 
-		sqlStatement = `
-		CREATE TABLE transfers (
+	sqlStatement = `
+		CREATE TABLE IF NOT EXISTS transfers (
 			id SERIAL PRIMARY KEY,
 			fromAddress TEXT,
 			toAddress TEXT,
@@ -80,15 +77,10 @@ func CreateTable(db *sql.DB, tableName string) error {
 			blockNumber INTEGER
 		);`
 
-		_, err = db.Exec(sqlStatement)
-		if err != nil {
-			return err
-		}
-
-		log.Println("Successfully created table!")
-		return nil
+	_, err = db.Exec(sqlStatement)
+	if err != nil {
+		return err
 	}
 
-	log.Printf("Table %s exists!", tableName)
 	return nil
 }
