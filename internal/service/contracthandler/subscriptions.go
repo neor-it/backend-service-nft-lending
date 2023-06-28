@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
-// HandleTransfers - handle transfers of NFT
+// subscriptionOnNFTAdded - subscribe on NFTAdded event
 func subscriptionOnNFTAdded(client *ethclient.Client, contractAddress common.Address, contractAbigen *abigencontract.MainFilterer) (chan *abigencontract.MainNFTAdded, event.Subscription, error) {
 	addedEvents := make(chan *abigencontract.MainNFTAdded)
 	addedSubscription, err := contractAbigen.WatchNFTAdded(nil, addedEvents, nil, nil)
