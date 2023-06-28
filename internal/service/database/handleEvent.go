@@ -17,13 +17,23 @@ const (
 
 func HandleNFTAdded(event *abigencontract.MainNFTAdded, db *sql.DB) error {
 	txHash := event.Raw.TxHash.Hex()
+
+	isExists, err := GetTransactionByHash(txHash, db)
+	if err != nil {
+		return err
+	}
+
+	if isExists { // if transaction already exists in database
+		return nil
+	}
+
 	blockNumber := event.Raw.BlockNumber
 
 	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
 	tokenId := fmt.Sprintf("%v", event.TokenId)
 	lender := event.Owner.Hex()
 
-	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTAdded")
+	_, err = db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTAdded")
 	if err != nil {
 		return err
 	}
@@ -33,13 +43,23 @@ func HandleNFTAdded(event *abigencontract.MainNFTAdded, db *sql.DB) error {
 
 func HandleNFTCanceled(event *abigencontract.MainNFTCanceled, db *sql.DB) error {
 	txHash := event.Raw.TxHash.Hex()
+
+	isExists, err := GetTransactionByHash(txHash, db)
+	if err != nil {
+		return err
+	}
+
+	if isExists { // if transaction already exists in database
+		return nil
+	}
+
 	blockNumber := event.Raw.BlockNumber
 
 	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
 	tokenId := fmt.Sprintf("%v", event.TokenId)
 	lender := event.Owner.Hex()
 
-	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTCanceled")
+	_, err = db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTCanceled")
 	if err != nil {
 		return err
 	}
@@ -49,6 +69,16 @@ func HandleNFTCanceled(event *abigencontract.MainNFTCanceled, db *sql.DB) error 
 
 func HandleNFTBorrowed(event *abigencontract.MainNFTBorrowed, db *sql.DB) error {
 	txHash := event.Raw.TxHash.Hex()
+
+	isExists, err := GetTransactionByHash(txHash, db)
+	if err != nil {
+		return err
+	}
+
+	if isExists { // if transaction already exists in database
+		return nil
+	}
+
 	blockNumber := event.Raw.BlockNumber
 
 	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
@@ -56,7 +86,7 @@ func HandleNFTBorrowed(event *abigencontract.MainNFTBorrowed, db *sql.DB) error 
 	lender := event.Lender.Hex()
 	borrower := event.Borrower.Hex()
 
-	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTBorrowed")
+	_, err = db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTBorrowed")
 	if err != nil {
 		return err
 	}
@@ -66,6 +96,16 @@ func HandleNFTBorrowed(event *abigencontract.MainNFTBorrowed, db *sql.DB) error 
 
 func HandleNFTReturned(event *abigencontract.MainNFTReturned, db *sql.DB) error {
 	txHash := event.Raw.TxHash.Hex()
+
+	isExists, err := GetTransactionByHash(txHash, db)
+	if err != nil {
+		return err
+	}
+
+	if isExists { // if transaction already exists in database
+		return nil
+	}
+
 	blockNumber := event.Raw.BlockNumber
 
 	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
@@ -73,7 +113,7 @@ func HandleNFTReturned(event *abigencontract.MainNFTReturned, db *sql.DB) error 
 	lender := event.Lender.Hex()
 	borrower := event.Borrower.Hex()
 
-	_, err := db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTReturned")
+	_, err = db.Exec(sqlStatement, lender, borrower, tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTReturned")
 	if err != nil {
 		return err
 	}
@@ -82,15 +122,24 @@ func HandleNFTReturned(event *abigencontract.MainNFTReturned, db *sql.DB) error 
 }
 
 func HandleNFTWithdrawn(event *abigencontract.MainNFTWithdrawn, db *sql.DB) error {
-
 	txHash := event.Raw.TxHash.Hex()
+
+	isExists, err := GetTransactionByHash(txHash, db)
+	if err != nil {
+		return err
+	}
+
+	if isExists { // if transaction already exists in database
+		return nil
+	}
+
 	blockNumber := event.Raw.BlockNumber
 
 	tokenAddress := common.HexToAddress(event.NFTAddress.Hex())
 	tokenId := fmt.Sprintf("%v", event.TokenId)
 	lender := event.Owner.Hex()
 
-	_, err := db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTWithdrawn")
+	_, err = db.Exec(sqlStatement, lender, "", tokenAddress.Hex(), tokenId, txHash, blockNumber, "NFTWithdrawn")
 	if err != nil {
 		return err
 	}
