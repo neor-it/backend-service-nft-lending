@@ -37,3 +37,28 @@ func GetTransferEvent(log types.Log, db *sql.DB) (bool, error) {
 
 	return false, nil
 }
+
+// GetAllTokenAddressesAndIds - returns all unique token addresses and token ids from the events table
+func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
+	rows, err := db.Query("SELECT DISTINCT tokenAddress, tokenId FROM events")
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var tokenAddresses []string
+	var tokenIds []int64
+
+	for rows.Next() {
+		var tokenAddress string
+		var tokenId int64
+		err = rows.Scan(&tokenAddress, &tokenId)
+		if err != nil {
+			return nil, nil, err
+		}
+		tokenAddresses = append(tokenAddresses, tokenAddress)
+		tokenIds = append(tokenIds, tokenId)
+	}
+
+	return tokenAddresses, tokenIds, nil
+}
