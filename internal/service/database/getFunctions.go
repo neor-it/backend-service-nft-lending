@@ -12,12 +12,10 @@ func GetLastProcessedBlockNumber(db *sql.DB) (int64, error) {
 	err := db.QueryRow("SELECT blocknumber FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			// table is empty
-			blockNumber = 0
-		} else { // unexpected error
-			return 0, err
+		if err != sql.ErrNoRows {
+			return 0, err // error other than no rows
 		}
+		blockNumber = 0 // table is empty
 	}
 
 	return blockNumber, nil
