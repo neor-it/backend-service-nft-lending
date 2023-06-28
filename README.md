@@ -3,7 +3,7 @@
 <p/> main.go - main file for run service on localhost
 <h4>Package contracthandler</h4>
 <p/> 1. ethUtil.go - has the GetEthClientAndAddress() and ReadAbi() functions.
-<p/> 2. eventHandler.go - subscribe on events and handle them.
+<p/> 2. eventHandlers.go - subscribe on events and handle them.
 <p/> 3. getAllNFTs.go - has the function GetNFTs() which returns a list of NFTInfo structs.
 <p/> 4. getEvents.go - have two functions: GetNFTHistory and GetTransfersByAddress. First one is used to get the history of NFTs, second one is used to get the history of transfers.
 <p/> 5. processEvents.go - have a function for each event that need to process.
