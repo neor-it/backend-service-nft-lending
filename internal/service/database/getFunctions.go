@@ -52,6 +52,7 @@ func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 	for rows.Next() {
 		var tokenAddress string
 		var tokenId int64
+
 		err = rows.Scan(&tokenAddress, &tokenId)
 		if err != nil {
 			return nil, nil, err
@@ -61,4 +62,19 @@ func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 	}
 
 	return tokenAddresses, tokenIds, nil
+}
+
+// GetTransactionByHash - returns true if the transaction hash is already in the database
+func GetTransactionByHash(txHash string, db *sql.DB) (bool, error) {
+	rows, err := db.Query("SELECT * FROM events WHERE transactionhash = $1", txHash)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
 }
