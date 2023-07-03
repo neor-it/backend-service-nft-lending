@@ -1,13 +1,13 @@
 package database
 
 import (
+	"GethBackServ/internal/endpoint/abigencontract"
 	"database/sql"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	_ "github.com/lib/pq"
 )
 
-func GetLastProcessedBlockNumber(db *sql.DB) (int64, error) {
+func GetLastProcessedBlockNumberInEvents(db *sql.DB) (int64, error) {
 	var blockNumber int64
 	err := db.QueryRow("SELECT blocknumber FROM events ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber)
 
@@ -21,8 +21,23 @@ func GetLastProcessedBlockNumber(db *sql.DB) (int64, error) {
 	return blockNumber, nil
 }
 
-func GetTransferEvent(log types.Log, db *sql.DB) (bool, error) {
-	txHash := log.TxHash.Hex()
+func GetLastProcessedBlockNumberInTransfers(db *sql.DB) (int64, error) {
+	var blockNumber int64
+	err := db.QueryRow("SELECT blocknumber FROM transfers ORDER BY blocknumber DESC LIMIT 1").Scan(&blockNumber)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return 0, err // error other than no rows
+		}
+		blockNumber = 0 // table is empty
+	}
+
+	return blockNumber, nil
+}
+
+func GetTransferEvent(log *abigencontract.Erc721Transfer, db *sql.DB) (bool, error) {
+	txHash := log.Raw.TxHash.Hex()
+
 	rows, err := db.Query("SELECT * FROM transfers WHERE transactionhash = $1", txHash)
 	if err != nil {
 		return false, err
@@ -40,7 +55,7 @@ func GetTransferEvent(log types.Log, db *sql.DB) (bool, error) {
 func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 	rows, err := db.Query("SELECT DISTINCT tokenAddress, tokenId FROM events")
 	if err != nil {
-		return nil, nil, err
+		panic(err)
 	}
 	defer rows.Close()
 
@@ -53,7 +68,7 @@ func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 
 		err = rows.Scan(&tokenAddress, &tokenId)
 		if err != nil {
-			return nil, nil, err
+			panic(err)
 		}
 		tokenAddresses = append(tokenAddresses, tokenAddress)
 		tokenIds = append(tokenIds, tokenId)
