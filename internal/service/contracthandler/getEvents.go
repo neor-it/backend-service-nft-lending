@@ -12,25 +12,12 @@ import (
 )
 
 func GetNFTHistory(contractAddress common.Address, tokenAddress common.Address, tokenId *big.Int, walletAddress common.Address, db *sql.DB) ([]structure.Event, error) {
-	history := make([]structure.Event, 0)
-
-	signatures := [][]byte{
-		[]byte("NFTAdded"),
-		[]byte("NFTWithdrawn"),
-		[]byte("NFTBorrowed"),
-		[]byte("NFTReturned"),
-		[]byte("NFTCanceled"),
+	nftEvents, err := database.TrackEvents(contractAddress, tokenAddress, tokenId, walletAddress, db)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, signature := range signatures {
-		nftEvents, err := database.TrackEvents(contractAddress, tokenAddress, tokenId, walletAddress, signature, db)
-		if err != nil {
-			return nil, err
-		}
-		history = append(history, nftEvents...) // unpack slice of slices into one slice of events
-	}
-
-	return history, nil
+	return nftEvents, nil
 }
 
 func GetTransfersByAddress(tokenAddress common.Address, tokenId int64) ([]structure.Transfers, error) {
