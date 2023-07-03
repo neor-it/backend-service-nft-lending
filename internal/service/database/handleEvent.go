@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -147,13 +146,13 @@ func HandleNFTWithdrawn(event *abigencontract.MainNFTWithdrawn, db *sql.DB) erro
 	return nil
 }
 
-func HandleTransfer(contractAddress common.Address, event types.Log, db *sql.DB) error {
-	tokenAddress := event.Address.Hex()
-	from := event.Topics[1].Hex()
-	to := event.Topics[2].Hex()
-	tokenId := event.Topics[3].Big().Uint64()
-	blockNumber := event.BlockNumber
-	txHash := event.TxHash.Hex()
+func HandleTransfer(contractAddress common.Address, event *abigencontract.Erc721Transfer, db *sql.DB) error {
+	tokenAddress := event.Raw.Address.Hex()
+	from := event.From.Hex()
+	to := event.To.Hex()
+	tokenId := event.Raw.Topics[3].Big().Uint64()
+	blockNumber := event.Raw.BlockNumber
+	txHash := event.Raw.TxHash.Hex()
 
 	nContractAddress := structure.NormalizeAddress(contractAddress.Hex())
 	nFrom := structure.NormalizeAddress(from)
