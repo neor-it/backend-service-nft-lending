@@ -6,6 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func processNFTAddedEvents(contractAbigen *abigencontract.MainFilterer, filterQuery *bind.FilterOpts, db *sql.DB) error {
@@ -97,6 +98,35 @@ func processNFTBorrowedEvents(contractAbigen *abigencontract.MainFilterer, filte
 	}
 
 	if err := borrowedLogs.Error(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func processTransferEvents(contractAddress common.Address, contractAbigen *abigencontract.Erc721Filterer, filterQuery *bind.FilterOpts, db *sql.DB) error {
+	transferLogs, err := contractAbigen.FilterTransfer(filterQuery, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+	defer transferLogs.Close()
+
+	for transferLogs.Next() {
+		event := transferLogs.Event
+
+		transferEventExists, err := database.GetTransferEvent(event, db)
+		if err != nil {
+			return err
+		}
+
+		if transferEventExists {
+			continue
+		}
+
+		database.HandleTransfer(contractAddress, event, db)
+	}
+
+	if err := transferLogs.Error(); err != nil {
 		return err
 	}
 
