@@ -9,10 +9,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func TrackEvents(contractAddress common.Address, tokenAddress common.Address, tokenId *big.Int, walletAddress common.Address, eventSignature []byte, db *sql.DB) ([]structure.Event, error) {
+func TrackEvents(contractAddress common.Address, tokenAddress common.Address, tokenId *big.Int, walletAddress common.Address, db *sql.DB) ([]structure.Event, error) {
 	var events []structure.Event
 
-	rows, err := db.Query(`SELECT * FROM events WHERE ((tokenAddress = $1 AND tokenId = $2) OR (lender = $3 OR borrower = $3)) AND signature = $4`, tokenAddress.Hex(), tokenId.String(), walletAddress.Hex(), eventSignature)
+	rows, err := db.Query(`SELECT * FROM events WHERE ((tokenAddress = $1 AND tokenId = $2) OR (lender = $3 OR borrower = $3))`, tokenAddress.Hex(), tokenId.String(), walletAddress.Hex())
 	if err != nil {
 		return nil, err
 	}
