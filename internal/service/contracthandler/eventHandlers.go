@@ -6,13 +6,12 @@ import (
 	"GethBackServ/internal/service/structure"
 	"context"
 	"database/sql"
+	"log"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -82,7 +81,12 @@ func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract
 		return nil
 	}
 
-	sub, logs, err := subscribeOnTransferEvent(client, event)
+	contractAbigen, err := abigencontract.NewErc721Filterer(tokenAddress, client)
+	if err != nil {
+		return err
+	}
+
+	sub, logs, err := subscribeOnTransferEvent(client, tokenAddress, contractAbigen)
 	if err != nil {
 		return err
 	}
@@ -90,11 +94,11 @@ func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract
 	for {
 		select {
 		case err := <-sub.Err():
-			return err
+			log.Printf("Error in subscription on transfer event: %v", err)
 		case event := <-logs:
 			transferEventExists, err := database.GetTransferEvent(event, db)
 			if err != nil {
-				return err
+				panic(err)
 			}
 
 			if !transferEventExists {
@@ -105,53 +109,42 @@ func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract
 }
 
 func HandleTransferEvents(client *ethclient.Client, tokenAddress common.Address, tokenId *big.Int) error {
-	ethInfo, _ := GetEthClientInfo()
+	ethInfo, err := GetEthClientInfo()
+	if err != nil {
+		return err
+	}
+
 	db, err := database.GetConnection()
 	if err != nil {
 		return err
 	}
 
-	transferEventSignature := crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)"))
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			tokenAddress,
-		},
-		Topics: [][]common.Hash{
-			{
-				transferEventSignature,
-			},
-		},
-	}
-
-	logs, err := client.FilterLogs(context.Background(), query)
-
+	contractAbigen, err := abigencontract.NewErc721Filterer(tokenAddress, client)
 	if err != nil {
 		return err
 	}
 
-	for _, log := range logs {
-		tokenIdLog := log.Topics[3].Big()
+	blockNumber, err := database.GetLastProcessedBlockNumberInTransfers(db.DB)
+	if err != nil {
+		return err
+	}
 
-		transferEventExists, err := database.GetTransferEvent(log, db.DB)
-		if err != nil {
-			return err
-		}
+	filterQuery := &bind.FilterOpts{
+		Start:   uint64(blockNumber),
+		End:     nil,
+		Context: context.Background(),
+	}
 
-		if transferEventExists {
-			continue
-		}
-
-		if tokenIdLog.Cmp(tokenId) == 0 {
-			database.HandleTransfer(ethInfo.ContractAddress, log, db.DB)
-		}
+	err = processTransferEvents(ethInfo.ContractAddress, contractAbigen, filterQuery, db.DB)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress common.Address, contractAbigen *abigencontract.MainFilterer) error {
-	blockNumber, err := database.GetLastProcessedBlockNumber(db)
+	blockNumber, err := database.GetLastProcessedBlockNumberInEvents(db)
 	if err != nil {
 		return err
 	}
@@ -193,12 +186,14 @@ func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress co
 func HandleMissedTransfers(ethInfo *structure.EthClientInfo, db *sql.DB) error {
 	tokenAddresses, tokenIds, err := database.GetAllTokenAddressesAndIds(db)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	contractAddress := ethInfo.ContractAddress
 
 	for i, tokenAddress := range tokenAddresses {
+		HandleTransferEvents(ethInfo.Client, common.HexToAddress(tokenAddress), big.NewInt(tokenIds[i]))
+
 		event := &abigencontract.MainNFTAdded{
 			NFTAddress: common.HexToAddress(tokenAddress),
 			TokenId:    big.NewInt(tokenIds[i]),
