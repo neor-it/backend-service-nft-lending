@@ -3,12 +3,9 @@ package contracthandler
 import (
 	"GethBackServ/internal/endpoint/abigencontract"
 	"GethBackServ/internal/service/structure"
-	"context"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -69,31 +66,14 @@ func subscriptionOnNFTBorrowed(client *ethclient.Client, contractAddress common.
 }
 
 // subscribeOnTransferEvent - subscribe on Transfer event for token with address tokenAddress
-func subscribeOnTransferEvent(client *ethclient.Client, event *abigencontract.MainNFTAdded) (ethereum.Subscription, chan types.Log, error) {
-	transferEventSignature := crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)"))
-	tokenAddress := event.NFTAddress
-	tokenId := event.TokenId
-
-	HandleTransferEvents(client, tokenAddress, tokenId)
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			tokenAddress,
-		},
-		Topics: [][]common.Hash{
-			{
-				transferEventSignature,
-			},
-		},
-	}
-
-	logs := make(chan types.Log)
-	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+func subscribeOnTransferEvent(client *ethclient.Client, contractAddress common.Address, contract *abigencontract.Erc721Filterer) (ethereum.Subscription, chan *abigencontract.Erc721Transfer, error) {
+	transferEvents := make(chan *abigencontract.Erc721Transfer)
+	transferSubscription, err := contract.WatchTransfer(nil, transferEvents, nil, nil, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	structure.SubscriptionMap[tokenAddress] = true
+	structure.SubscriptionMap[contractAddress] = true
 
-	return sub, logs, nil
+	return transferSubscription, transferEvents, nil
 }
