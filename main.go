@@ -34,10 +34,10 @@ func main() {
 	}
 
 	// Handle missed events
-	go contracthandler.HandleMissedEvents(ethInfo.Client, db.DB, ethInfo.ContractAddress, contractAbigen)
+	contracthandler.HandleMissedEvents(ethInfo.Client, db.DB, ethInfo.ContractAddress, contractAbigen)
 
 	// Handle missed transfers and subscribe on transfers events
-	go contracthandler.HandleMissedTransfers(ethInfo, db.DB)
+	contracthandler.HandleMissedTransfers(ethInfo, db.DB)
 
 	// Start listening events in real time
 	go contracthandler.HandleEvents(ethInfo.Client, db.DB, ethInfo.ContractAddress, contractAbigen)
