@@ -98,7 +98,7 @@ func HandleTransfers(client *ethclient.Client, db *sql.DB, event *abigencontract
 		case event := <-logs:
 			transferEventExists, err := database.GetTransferEvent(event, db)
 			if err != nil {
-				panic(err)
+				return err
 			}
 
 			if !transferEventExists {
@@ -186,7 +186,7 @@ func HandleMissedEvents(client *ethclient.Client, db *sql.DB, contractAddress co
 func HandleMissedTransfers(ethInfo *structure.EthClientInfo, db *sql.DB) error {
 	tokenAddresses, tokenIds, err := database.GetAllTokenAddressesAndIds(db)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	contractAddress := ethInfo.ContractAddress

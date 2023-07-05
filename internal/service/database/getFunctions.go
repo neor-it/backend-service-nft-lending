@@ -55,7 +55,7 @@ func GetTransferEvent(log *abigencontract.Erc721Transfer, db *sql.DB) (bool, err
 func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 	rows, err := db.Query("SELECT DISTINCT tokenAddress, tokenId FROM events")
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 	defer rows.Close()
 
@@ -68,7 +68,7 @@ func GetAllTokenAddressesAndIds(db *sql.DB) ([]string, []int64, error) {
 
 		err = rows.Scan(&tokenAddress, &tokenId)
 		if err != nil {
-			panic(err)
+			return nil, nil, err
 		}
 		tokenAddresses = append(tokenAddresses, tokenAddress)
 		tokenIds = append(tokenIds, tokenId)
