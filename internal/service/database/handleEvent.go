@@ -2,7 +2,6 @@ package database
 
 import (
 	"GethBackServ/internal/endpoint/abigencontract"
-	"GethBackServ/internal/service/structure"
 	"database/sql"
 	"fmt"
 
@@ -154,11 +153,7 @@ func HandleTransfer(contractAddress common.Address, event *abigencontract.Erc721
 	blockNumber := event.Raw.BlockNumber
 	txHash := event.Raw.TxHash.Hex()
 
-	nContractAddress := structure.NormalizeAddress(contractAddress.Hex())
-	nFrom := structure.NormalizeAddress(from)
-	nTo := structure.NormalizeAddress(to)
-
-	if nContractAddress == nFrom || nContractAddress == nTo {
+	if contractAddress.Hex() == from || contractAddress.Hex() == to {
 		sqlStatement := `INSERT INTO transfers (fromAddress, toAddress, tokenAddress, tokenId, transactionHash, blockNumber)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
